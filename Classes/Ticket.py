@@ -1,10 +1,13 @@
+import uuid
+
 class Ticket:
-    def __init__(self, origin: str, destination: str, path: List[Station], price: float):
+    def __init__(self, origin, destination, path, price, username=None):
         self.ticket_id = str(uuid.uuid4())[:8]
         self.origin = origin
         self.destination = destination
         self.path = path
         self.price = price
+        self.username = username
         self.instructions = []
         self._generate_instructions()
     
@@ -48,19 +51,23 @@ class Ticket:
         print(f"\n{'='*60}")
         print(f"Ticket ID: {self.ticket_id}")
         print(f"Route: {self.origin} → {self.destination}")
-        print(f"Price: ${self.price:.2f}")
-        print(f"Stations: {len(self.path) - 1} stations")
+        print(f"Price: ₹{self.price:.0f}")
+        if self.username:
+            print(f"User: {self.username}")
+        stations_crossed = max(len(self.path) - 1, 0)
+        print(f"Stations: {stations_crossed} stations")
         print(f"\nTravel Instructions:")
         for i, instruction in enumerate(self.instructions, 1):
             print(f"  {i}. {instruction}")
         print(f"{'='*60}\n")
     
     def to_dict(self):
-        path_str = " -> ".join([s.name for s in self.path])
+        path_str = " -> ".join([s.name for s in self.path]) if self.path else ""
         return {
             'ticket_id': self.ticket_id,
             'origin': self.origin,
             'destination': self.destination,
             'path': path_str,
-            'price': self.price
+            'price': self.price,
+            'username': self.username or ''
         }

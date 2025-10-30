@@ -1,3 +1,9 @@
+import os
+import csv
+from collections import defaultdict, deque
+from .Station import Station
+from .Line import Line
+from .Ticket import Ticket
 
 class MetroSystem:
     def __init__(self):
@@ -6,7 +12,7 @@ class MetroSystem:
         self.tickets = []
         self.load_from_csv()
     
-    def add_line(self, line: Line):
+    def add_line(self, line):
         self.lines[line.line_id] = line
         for station in line.stations:
             if station.name not in self.stations:
@@ -52,6 +58,29 @@ class MetroSystem:
                     if station1 and station2:
                         station1.add_connection(station2)
                         station2.add_connection(station1)
+        
+        # Load tickets (after graph is ready so we can rebuild paths)
+        if os.path.exists('tickets.csv'):
+            with open('tickets.csv', 'r') as f:
+                try:
+                    reader = csv.DictReader(f)
+                    for row in reader:
+                        if not row:
+                            continue
+                        origin = row.get('origin')
+                        destination = row.get('destination')
+                        username = row.get('username') or None
+                        # Rebuild path using current network (ensures Station objects)
+                        path = self.find_shortest_path(origin, destination) if origin and destination else None
+                        try:
+                            price = float(row.get('price', '0') or 0)
+                        except ValueError:
+                            price = 0.0
+                        ticket = Ticket(origin, destination, path or [], price, username=username)
+                        self.tickets.append(ticket)
+                except csv.Error:
+                    # If file is empty or malformed, skip loading
+                    pass
     
     def save_to_csv(self):
         """Save all data to CSV files"""
@@ -114,15 +143,15 @@ class MetroSystem:
         
         return None
     
-    def calculate_price(self, path: List[Station]) -> float:
-        """Calculate ticket price based on number of stations"""
+    def calculate_price(self, path):
+        """Calculate ticket price based on number of stations (INR)"""
         if len(path) <= 1:
-            return 2.0  # Base fare
+            return 10.0  # Base fare ₹10
         stations_crossed = len(path) - 1
-        # Price: $2 base + $0.50 per station
-        return 2.0 + (stations_crossed * 0.5)
+        # Price: ₹10 base + ₹5 per station
+        return 10.0 + (stations_crossed * 5.0)
     
-    def purchase_ticket(self, origin: str, destination: str) -> Optional[Ticket]:
+    def purchase_ticket(self, origin, destination, username=None):
         """Purchase a ticket for the given route"""
         path = self.find_shortest_path(origin, destination)
         
@@ -131,7 +160,7 @@ class MetroSystem:
             return None
         
         price = self.calculate_price(path)
-        ticket = Ticket(origin, destination, path, price)
+        ticket = Ticket(origin, destination, path, price, username=username)
         self.tickets.append(ticket)
         self.save_to_csv()
         
@@ -154,88 +183,19 @@ class MetroSystem:
         
         print("\n" + "="*60 + "\n")
     
-    def view_tickets(self):
-        """Display all purchased tickets"""
-        if not self.tickets:
-            print("\n❌ No tickets purchased yet.")
+    def view_tickets(self, username: str = None):
+        """Display purchased tickets, optionally filtered by username"""
+        filtered = self.tickets
+        if username:
+            filtered = [t for t in self.tickets if (t.username or '') == username]
+        if not filtered:
+            print("\n❌ No tickets purchased yet." if not username else f"\n❌ No tickets found for user: {username}.")
             return
         
         print("\n" + "="*60)
-        print("PURCHASED TICKETS")
+        print("PURCHASED TICKETS" + (" — " + username if username else ""))
         print("="*60)
         
-        for ticket in self.tickets:
+        for ticket in filtered:
             ticket.display()
     
-    def create_default_metro(self):
-        """Create a default metro system for demonstration"""
-        # Create stations
-        stations = {
-            # Red Line
-            'Central': Station('Central', ['Red']),
-            'Park': Station('Park', ['Red', 'Green']),  # Transfer station
-            'Museum': Station('Museum', ['Red', 'Blue']),  # Transfer station
-            'Station Square': Station('Station Square', ['Red']),
-            
-            # Blue Line
-            'Airport': Station('Airport', ['Blue']),
-            'Downtown': Station('Downtown', ['Blue']),
-            'Port': Station('Port', ['Blue']),
-            
-            # Green Line
-            'University': Station('University', ['Green']),
-            'Library': Station('Library', ['Green']),
-            'Stadium': Station('Stadium', ['Green']),
-        }
-        
-        # Create lines
-        red_line = Line("Red", "red")
-        blue_line = Line("Blue", "blue")
-        green_line = Line("Green", "green")
-        
-        # Add stations to lines
-        red_stations = ['Central', 'Park', 'Museum', 'Station Square']
-        blue_stations = ['Airport', 'Downtown', 'Museum', 'Port']
-        green_stations = ['University', 'Library', 'Park', 'Stadium']
-        
-        for name in red_stations:
-            red_line.add_station(stations[name])
-            self.stations[name] = stations[name]
-        
-        for name in blue_stations:
-            blue_line.add_station(stations[name])
-            if name not in self.stations:
-                self.stations[name] = stations[name]
-        
-        for name in green_stations:
-            green_line.add_station(stations[name])
-            if name not in self.stations:
-                self.stations[name] = stations[name]
-        
-        # Add lines to system
-        self.add_line(red_line)
-        self.add_line(blue_line)
-        self.add_line(green_line)
-        
-        # Connect adjacent stations on Red Line
-        stations['Central'].add_connection(stations['Park'])
-        stations['Park'].add_connection(stations['Museum'])
-        stations['Museum'].add_connection(stations['Station Square'])
-        
-        # Connect adjacent stations on Blue Line
-        stations['Airport'].add_connection(stations['Downtown'])
-        stations['Downtown'].add_connection(stations['Museum'])
-        stations['Museum'].add_connection(stations['Port'])
-        
-        # Connect adjacent stations on Green Line
-        stations['University'].add_connection(stations['Library'])
-        stations['Library'].add_connection(stations['Park'])
-        stations['Park'].add_connection(stations['Stadium'])
-        
-        # Bidirectional connections
-        for station in self.stations.values():
-            for conn in list(station.connections):
-                if station not in conn.connections:
-                    conn.add_connection(station)
-        
-        self.save_to_csv()

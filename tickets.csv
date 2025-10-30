@@ -1,2 +1,3 @@
-ticket_id,origin,destination,path,price
-cf84ad8a,Airport,Stadium,Airport -> Downtown -> Museum -> Park -> Stadium,4.0
+ticket_id,origin,destination,path,price,username
+eaf10d78,Stadium,Central,Stadium -> Park -> Central,20.0,devesh kedia
+72a1a9bd,University,Stadium,University -> Library -> Park -> Stadium,25.0,devesh kedia
