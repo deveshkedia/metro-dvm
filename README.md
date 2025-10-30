@@ -183,20 +183,3 @@ The system comes with a default 3-line metro network:
 ## Algorithm
 
 The shortest path is calculated using Breadth-First Search (BFS), which guarantees the minimum number of stations between origin and destination.
-
-## Future Enhancements
-
-- [ ] Graphical visualization with Matplotlib
-- [ ] Add more metro lines and stations
-- [ ] Real-time train schedules
-- [ ] Ticket expiry dates
-- [ ] Discount tickets (senior, student)
-- [ ] Multiple payment methods
-
-## License
-
-This project is created for educational purposes.
-
-## Author
-
-Metro Ticket System - OOP Project
