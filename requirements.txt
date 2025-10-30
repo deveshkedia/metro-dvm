@@ -1,0 +1,3 @@
+# Metro System Requirements
+# Standard library only - no external dependencies required
+
